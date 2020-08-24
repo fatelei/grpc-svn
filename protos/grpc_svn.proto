@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package grpc_svn;
+
+import "common/common.proto";
+
+option go_package = "github.com/fatelei/grpc-svn/internal/grpc_svn_protos";
+
+
+message CloneRepoRequest {
+	string svnUrl = 1;
+	string mailSuffix = 2;
+}
+
+message CloneResponse {
+	common.ResponseStatus status = 1;
+}
+
+
+message UpdateRepoRequest {
+	string svnUrl = 1;
+}
+
+message UpdateRepoResponse {
+	common.ResponseStatus status = 1;
+}
+
+
+service GrpcSvnService {
+	rpc Clone(CloneRepoRequest) returns (CloneResponse);
+	rpc UpdateRepo(UpdateRepoRequest) returns (UpdateRepoResponse);
+}
