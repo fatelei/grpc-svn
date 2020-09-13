@@ -27,19 +27,18 @@ func (p *GitSvnImpl) Clone(ctx context.Context, svnUrl string, mailSuffix string
 	var out string
 	var err error
 	var b bytes.Buffer
-	err = p.genAuthorsForRepo(svnUrl, mailSuffix, username, password)
+	var authorFilePath string
+	authorFilePath, err = p.genAuthorsForRepo(svnUrl, mailSuffix, username, password)
 	if err != nil {
 		panic(err)
 		return err
 	}
-	authorFileName := utils.GetAuthorsFileName(utils.GetRepoName(svnUrl))
-	path := p.generatePath(authorFileName)
 	commands := make([]*exec.Cmd, 0)
 	if len(password) > 0 {
 		commands = append(commands, exec.Command("echo", password))
 	}
 	commands = append(commands, exec.Command(
-		"git", "snv", "clone", "-s", fmt.Sprintf("--author-files=%s", path), svnUrl))
+		"git", "svn", "clone", svnUrl, "-s", fmt.Sprintf("--authors-file=%s", authorFilePath), "--username", username))
 	if err = pipe.Command(&b, commands...); err != nil {
 		log.Fatal(err)
 	}
@@ -50,7 +49,8 @@ func (p *GitSvnImpl) Clone(ctx context.Context, svnUrl string, mailSuffix string
 }
 
 func (p *GitSvnImpl) Update(ctx context.Context, svnUrl string) error {
-	path := p.generatePath(svnUrl)
+	repoName := utils.GetRepoName(svnUrl)
+	path := p.GeneratePath(repoName)
 	_, err := p.checkPath(path)
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func (p *GitSvnImpl) Update(ctx context.Context, svnUrl string) error {
 }
 
 
-func (p *GitSvnImpl) genAuthorsForRepo(svnUrl string, mailSuffix string, username string, password string) error {
+func (p *GitSvnImpl) genAuthorsForRepo(svnUrl string, mailSuffix string, username string, password string) (path string, err error) {
 	var b bytes.Buffer
 	commands := make([]*exec.Cmd, 3, 3)
 	if len(username) > 0 && len(password) > 0 {
@@ -76,7 +76,7 @@ func (p *GitSvnImpl) genAuthorsForRepo(svnUrl string, mailSuffix string, usernam
 	commands[1] = exec.Command("grep", `^r`)
 	commands[2] = exec.Command("awk","-F", `|`, `{print $2}`)
 
-	if err := pipe.Command(&b, commands...); err != nil {
+	if err = pipe.Command(&b, commands...); err != nil {
 		log.Fatal(err)
 	}
 
@@ -94,32 +94,38 @@ func (p *GitSvnImpl) genAuthorsForRepo(svnUrl string, mailSuffix string, usernam
 		}
 	}
 	authorFileName := utils.GetAuthorsFileName(utils.GetRepoName(svnUrl))
-	path := p.generatePath(authorFileName)
+	path = p.GeneratePath(authorFileName)
 	isValidPath, err := p.checkPath(path)
 	if !isValidPath {
 		content := []byte(strings.Join(contents, "\n"))
 		err = ioutil.WriteFile(path, content, 0644)
 		if err != nil {
 			fmt.Errorf("gen authors files failed: %+v\n", err)
-			return err
+			return
 		}
-		return nil
+		return
 	}
-	return err
+	return
 }
 
-func (p *GitSvnImpl) generatePath(svnUrl string) string {
-	repoName := utils.GetRepoName(svnUrl)
+func (p *GitSvnImpl) GeneratePath(filename string) string {
 	var path string
 	if len(config.DefaultConfig.DestPath) > 0 {
-		path = fmt.Sprintf("%s/%s", config.DefaultConfig.DestPath, repoName)
+		path = fmt.Sprintf("%s/%s", config.DefaultConfig.DestPath, filename)
 	} else {
 		cwd, _ := os.Getwd()
-		path = fmt.Sprintf("%s/%s", cwd, repoName)
+		path = fmt.Sprintf("%s/%s", cwd, filename)
 	}
 	return path
 }
 
+func (p *GitSvnImpl) CleanRepoFromLocal(svnUrl string) {
+	repoName := utils.GetRepoName(svnUrl)
+	path := p.GeneratePath(repoName)
+	if err := os.RemoveAll(path); err != nil {
+		fmt.Printf("remove %s error %v\n", svnUrl, err)
+	}
+}
 
 func (p *GitSvnImpl) checkPath(path string) (bool, error) {
 	if _, err := os.Stat(path); err != nil {
