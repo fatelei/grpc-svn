@@ -14,3 +14,8 @@ go mod tidy
 ```
 go test
 ```
+
+# docker
+```
+docker build -t grpc_svn .
+```
