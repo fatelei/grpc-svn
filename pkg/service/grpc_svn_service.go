@@ -36,7 +36,7 @@ func (p *GrpcSvnServiceServerImpl) UpdateRepo(
 
 func (p *GrpcSvnServiceServerImpl) Clone(ctx context.Context, param *grpc_svn_protos.CloneRepoRequest) (
 	*grpc_svn_protos.CloneResponse, error) {
-	err := p.ctl.Clone(ctx, param.SvnUrl, param.MailSuffix)
+	err := p.ctl.Clone(ctx, param.SvnUrl, param.MailSuffix, param.Username, param.Password)
 	if err == nil {
 		response := &grpc_svn_protos.CloneResponse{}
 		response.Status = &common.ResponseStatus{

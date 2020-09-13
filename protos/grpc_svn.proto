@@ -10,6 +10,8 @@ option go_package = "github.com/fatelei/grpc-svn/internal/grpc_svn_protos";
 message CloneRepoRequest {
 	string svnUrl = 1;
 	string mailSuffix = 2;
+	string username = 3;
+	string password = 4;
 }
 
 message CloneResponse {
