@@ -7,12 +7,13 @@ grpc svn service
 
 # 构建
 ```
-go mod tidy
+make build
+make proto
 ```
 
 # 测试
 ```
-go test
+make test
 ```
 
 # docker
