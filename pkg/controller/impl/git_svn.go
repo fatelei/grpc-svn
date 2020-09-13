@@ -23,6 +23,9 @@ func NewGivSvnController() *GitSvnImpl {
 	return &GitSvnImpl{}
 }
 
+/**
+ * git svn clone 下载代码
+ */
 func (p *GitSvnImpl) Clone(ctx context.Context, svnUrl string, mailSuffix string, username string, password string) error {
 	var out string
 	var err error
@@ -48,22 +51,31 @@ func (p *GitSvnImpl) Clone(ctx context.Context, svnUrl string, mailSuffix string
 	return nil
 }
 
+/**
+ * git svn rebase svnurl, 更新代码
+ */
 func (p *GitSvnImpl) Update(ctx context.Context, svnUrl string) error {
+	var buf bytes.Buffer
 	repoName := utils.GetRepoName(svnUrl)
 	path := p.GeneratePath(repoName)
 	_, err := p.checkPath(path)
 	if err != nil {
 		return err
 	}
-	out, err := utils.ExecCommand(fmt.Sprintf("current_dir=$PWD;cd %s;git svn rebase;cd $current_dir;", path))
+	cmd := exec.Command("git", "svn", "rebase")
+	cmd.Dir = path
+	cmd.Stdout = &buf
+	err = cmd.Run()
 	if err != nil {
 		return err
 	}
-	fmt.Printf("update response: %s", *out)
+	fmt.Printf("update response: %s", buf.String())
 	return nil
 }
 
-
+/**
+ * 生成 authors-file
+ */
 func (p *GitSvnImpl) genAuthorsForRepo(svnUrl string, mailSuffix string, username string, password string) (path string, err error) {
 	var b bytes.Buffer
 	commands := make([]*exec.Cmd, 3, 3)
@@ -108,6 +120,9 @@ func (p *GitSvnImpl) genAuthorsForRepo(svnUrl string, mailSuffix string, usernam
 	return
 }
 
+/**
+ * 生成项目所需要的路径
+ */
 func (p *GitSvnImpl) GeneratePath(filename string) string {
 	var path string
 	if len(config.DefaultConfig.DestPath) > 0 {
@@ -119,6 +134,9 @@ func (p *GitSvnImpl) GeneratePath(filename string) string {
 	return path
 }
 
+/**
+ * 清理本地路径
+ */
 func (p *GitSvnImpl) CleanRepoFromLocal(svnUrl string) {
 	repoName := utils.GetRepoName(svnUrl)
 	path := p.GeneratePath(repoName)
@@ -127,6 +145,9 @@ func (p *GitSvnImpl) CleanRepoFromLocal(svnUrl string) {
 	}
 }
 
+/**
+ * 检查路径是否存在
+ */
 func (p *GitSvnImpl) checkPath(path string) (bool, error) {
 	if _, err := os.Stat(path); err != nil {
 		return false, err
